@@ -2,13 +2,11 @@
 # $Id: edit_entry.php,v 1.17 2009/12/27 19:15:18 arborrow Exp $
 require_once("../../../config.php"); //for Moodle integration
 require_once('grab_globals.inc.php');
-require_once("config.inc.php");
-require_once("functions.php");
-require_once("$dbsys.php");
-require_once("mrbs_auth.php");
-
+include "config.inc.php";
+include "functions.php";
+include "$dbsys.php";
+include "mrbs_auth.php";
 require_login();
-//Todo: Is this global really necessary, can we use Moodle's setting
 global $twentyfourhour_format;
 
 $day = optional_param('day', 0, PARAM_INT);
@@ -31,149 +29,161 @@ $series = optional_param('series', 0, PARAM_INT);
 $create_by = optional_param('create_by', 0, PARAM_INT);
 
 #If we dont know the right date then make it up
-if (($day==0) or ($month==0) or ($year==0)) {
+if(($day==0) or ($month==0) or ($year==0)) {
 	$day   = date("d");
 	$month = date("m");
 	$year  = date("Y");
 }
+// if(empty($area)) //handled by optional_param -ab
+//	$area = get_default_area();
 
-if (!getAuthorised(1)) {
-    showAccessDenied($day, $month, $year, $area);
-    exit;
+// if(!isset($edit_type)) //handled by optional_param -ab
+// 	$edit_type = "";
+
+if(!getAuthorised(1)) {
+	showAccessDenied($day, $month, $year, $area);
+	exit;
 }
 
-/* This page will either add or modify a booking
- * We need to know:
- * Name of booker
- * Description of meeting
- * Date (option select box for day, month, year)
- * Time
- * Duration
- * Internal/External
- * Firstly we need to know if this is a new booking or modifying an old one
- * and if it's a modification we need to get all the old data from the db.
- * If we had $id passed in then it's a modification.
- */
+# This page will either add or modify a booking
+
+# We need to know:
+#  Name of booker
+#  Description of meeting
+#  Date (option select box for day, month, year)
+#  Time
+#  Duration
+#  Internal/External
+
+# Firstly we need to know if this is a new booking or modifying an old one
+# and if it's a modification we need to get all the old data from the db.
+# If we had $id passed in then it's a modification.
 if ($id>0) {
-    //Todo: replace get_record
-    $sql = "SELECT name, create_by, description, start_time, end_time, type, room_id, entry_type, repeat_id, timestamp
-            FROM $tbl_entry
-            WHERE id=$id";
-    $res = sql_query($sql);
-    if (! $res) {
-        fatal_error(1, sql_error());
-    }
-    if (sql_count($res) != 1) {
-        fatal_error(1, get_string('entryid','block_mrbs') . $id . get_string('not_found','block_mrbs'));
-    }
-    $row = sql_row($res, 0);
-    sql_free($res);
-    /* Note: Removed stripslashes() calls from name and description. Previous
-     * versions of MRBS mistakenly had the backslash-escapes in the actual database
-     * records because of an extra addslashes going on. Fix your database and
-     * leave this code alone, please.
-     */
-    $name        = $row[0];
-    $create_by   = $row[1];
-    $description = $row[2];
+	$sql = "SELECT name, create_by, description, start_time, end_time, type, room_id, entry_type, repeat_id, timestamp 
+			FROM $tbl_entry 
+			WHERE id=$id";
+	$res = sql_query($sql);
+	if (! $res) { 
+	    fatal_error(1, sql_error());
+	}
+	if (sql_count($res) != 1) {
+	    fatal_error(1, get_string('entryid','block_mrbs') . $id . get_string('not_found','block_mrbs'));
+	}
+	$row = sql_row($res, 0);
+	sql_free($res);
+	// Note: Removed stripslashes() calls from name and description. Previous
+	// versions of MRBS mistakenly had the backslash-escapes in the actual database
+	// records because of an extra addslashes going on. Fix your database and
+	// leave this code alone, please.
+	$name        = $row[0];
+	$create_by   = $row[1];
+	$description = $row[2];
     $start_time   = $row[3];
-    $start_day   = userdate($row[3], '%d');
-    $start_month = userdate($row[3], '%m');
-    $start_year  = userdate($row[3], '%Y');
-    $start_hour  = userdate($row[3], '%H');
-    $start_min   = userdate($row[3], '%M');
+	$start_day   = userdate($row[3], '%d');
+	$start_month = userdate($row[3], '%m');
+	$start_year  = userdate($row[3], '%Y');
+	$start_hour  = userdate($row[3], '%H');
+	$start_min   = userdate($row[3], '%M');
     $end_time    = $row[4];
-    $duration    = $row[4] - $row[3] - cross_dst($row[3], $row[4]);
-    $type        = $row[5];
-    $room_id     = $row[6];
+	$duration    = $row[4] - $row[3] - cross_dst($row[3], $row[4]);
+	$type        = $row[5];
+	$room_id     = $row[6];
     //put this here so that a move can be coded into the get data
-    if (!empty($room)) {
+    if(!empty($room)) {
         $room_id=$room;
     }
-    $entry_type  = $row[7];
-    $rep_id      = $row[8];
+	$entry_type  = $row[7];
+	$rep_id      = $row[8];
 	
-    if($entry_type >= 1) {
-        // Todo: use get_record
-        $sql = "SELECT rep_type, start_time, end_date, rep_opt, rep_num_weeks, timestamp
-                FROM $tbl_repeat WHERE id=$rep_id";
-        $res = sql_query($sql);
-        if (! $res) {
-            fatal_error(1, sql_error());
-        }
-        if (sql_count($res) != 1) {
-            fatal_error(1, get_string('repeat_id','block_mrbs') . $rep_id . get_string('not_found','block_mrbs'));
-        }
-        $row = sql_row($res, 0);
-        sql_free($res);
-        $rep_type = $row[0];
-        if($edit_type == "series") {
-            $start_day   = (int)userdate($row[1], '%d');
-            $start_month = (int)userdate($row[1], '%m');
-            $start_year  = (int)userdate($row[1], '%Y');
-            $rep_end_day   = (int)userdate($row[2], '%d');
-            $rep_end_month = (int)userdate($row[2], '%m');
-            $rep_end_year  = (int)userdate($row[2], '%Y');
-            switch($rep_type) {
-                case 2:
-                case 6:
-                    $rep_day[0] = $row[3][0] != "0";
-                    $rep_day[1] = $row[3][1] != "0";
-                    $rep_day[2] = $row[3][2] != "0";
-                    $rep_day[3] = $row[3][3] != "0";
-                    $rep_day[4] = $row[3][4] != "0";
-                    $rep_day[5] = $row[3][5] != "0";
-                    $rep_day[6] = $row[3][6] != "0";
-                    if ($rep_type == 6) {
-                        $rep_num_weeks = $row[4];
-                    }
-                    break;
-                default:
-                    $rep_day = array(0, 0, 0, 0, 0, 0, 0);
-            }
-        } else {
-            $rep_type     = $row[0];
-            $rep_end_date = userdate($row[2], '%A %d %B %Y');
-            $rep_opt      = $row[3];
-        }
-    }
+	if($entry_type >= 1) {
+		$sql = "SELECT rep_type, start_time, end_date, rep_opt, rep_num_weeks, timestamp
+		        FROM $tbl_repeat WHERE id=$rep_id";
+		
+		$res = sql_query($sql);
+		if (! $res) {
+		    fatal_error(1, sql_error());
+		}
+		if (sql_count($res) != 1) {
+		    fatal_error(1, get_string('repeat_id','block_mrbs') . $rep_id . get_string('not_found','block_mrbs'));
+		}
+		$row = sql_row($res, 0);
+		sql_free($res);
+		$rep_type = $row[0];
+
+		if($edit_type == "series") {
+			$start_day   = (int)userdate($row[1], '%d');
+			$start_month = (int)userdate($row[1], '%m');
+			$start_year  = (int)userdate($row[1], '%Y');
+			
+			$rep_end_day   = (int)userdate($row[2], '%d');
+			$rep_end_month = (int)userdate($row[2], '%m');
+			$rep_end_year  = (int)userdate($row[2], '%Y');
+			
+			switch($rep_type) {
+				case 2:
+				case 6:
+					$rep_day[0] = $row[3][0] != "0";
+					$rep_day[1] = $row[3][1] != "0";
+					$rep_day[2] = $row[3][2] != "0";
+					$rep_day[3] = $row[3][3] != "0";
+					$rep_day[4] = $row[3][4] != "0";
+					$rep_day[5] = $row[3][5] != "0";
+					$rep_day[6] = $row[3][6] != "0";
+
+					if ($rep_type == 6)
+					{
+						$rep_num_weeks = $row[4];
+					}
+					
+					break;
+				
+				default:
+					$rep_day = array(0, 0, 0, 0, 0, 0, 0);
+			}
+		} else {
+			$rep_type     = $row[0];
+			$rep_end_date = userdate($row[2], '%A %d %B %Y');
+			$rep_opt      = $row[3];
+		}
+	}
 } else { // It is a new booking. The data comes from whichever button the user clicked
-    $edit_type   = "series";
-    $name        = getUserName();
-    $create_by   = getUserName();
-    $description = "Class";
-    $start_day   = $day;
-    $start_month = $month;
-    $start_year  = $year;
-
-    (isset($hour)) ? $start_hour = $hour : ''; // Avoid notices for $hour and $minute if periods is enabled
-    (isset($minute)) ? $start_min = $minute : '';
-    $type        = "I";
-    $room_id     = $room;
-    $start_time = mktime(12,$period,00,$start_month,$start_day,$start_year);
+	$edit_type   = "series";
+	$name        = getUserName();
+	$create_by   = getUserName();
+	$description = "Class";
+	$start_day   = $day;
+	$start_month = $month;
+	$start_year  = $year;
+    // Avoid notices for $hour and $minute if periods is enabled
+    (isset($hour)) ? $start_hour = $hour : '';
+	(isset($minute)) ? $start_min = $minute : '';
+    //$duration    = ($enable_periods ? 60 : 60 * 60);
+	$type        = "I";
+	$room_id     = $room;
+        $start_time = mktime(12,$period,00,$start_month,$start_day,$start_year);
     unset($id);
-    $end_time=$start_time;
-    $rep_id        = 0;
-    $rep_type      = 0;
-    $rep_end_day   = $day;
-    $rep_end_month = $month;
-    $rep_end_year  = $year;
-    $rep_day       = array(0, 0, 0, 0, 0, 0, 0);
+       $end_time=$start_time;
+	$rep_id        = 0;
+	$rep_type      = 0;
+	$rep_end_day   = $day;
+	$rep_end_month = $month;
+	$rep_end_year  = $year;
+	$rep_day       = array(0, 0, 0, 0, 0, 0, 0);
 }
-/* 
- * These next 4 if statements handle the situation where this page 
- * has been accessed directly and no arguments have been passed to it.
- * If we have not been provided with a room_id
- * */
 
+# These next 4 if statements handle the situation where
+# this page has been accessed directly and no arguments have
+# been passed to it.
+# If we have not been provided with a room_id
 if ($room_id==0  ) {
-    $sql = "SELECT id FROM $tbl_room LIMIT 1";
-    $res = sql_query($sql);
-    $row = sql_row($res, 0);
-    $room_id = $row[0];
+	$sql = "SELECT id FROM $tbl_room LIMIT 1";
+	$res = sql_query($sql);
+	$row = sql_row($res, 0);
+	$room_id = $row[0];
 }
 
-if (empty($start_hour) && $morningstarts<10) { //# If we have not been provided with starting time
+# If we have not been provided with starting time
+if (empty($start_hour) && $morningstarts<10) {
     $start_hour = "0$morningstarts";
 }
 
@@ -185,7 +195,8 @@ if (empty($start_min)) {
     $start_min = "00";
 }
 
-if (empty($rep_num_weeks)) { // Remove "Undefined variable" notice
+// Remove "Undefined variable" notice
+if (empty($rep_num_weeks)) {
     $rep_num_weeks = "";
 }
 
@@ -194,49 +205,57 @@ $enable_periods ? toPeriodString($start_min, $duration, $dur_units) : toTimeStri
 #now that we know all the data to fill the form with we start drawing it
 
 if(!getWritable($create_by, getUserName())) {
-    showAccessDenied($day, $month, $year, $area);
-    exit;
+	showAccessDenied($day, $month, $year, $area);
+	exit;
 }
 
 print_header_mrbs($day, $month, $year, $area);
 
-echo '<SCRIPT type="text/javascript" src="updatefreerooms.js"></SCRIPT>';
-echo '<SCRIPT LANGUAGE="JavaScript">';
+?>
+<SCRIPT type="text/javascript" src="updatefreerooms.js"></SCRIPT> 
+<SCRIPT LANGUAGE="JavaScript">
+
+<?php
 echo 'var currentroom='. $room_id.';';
 if (has_capability("block/mrbs:forcebook",get_context_instance(CONTEXT_SYSTEM))){
     echo 'var canforcebook=true;';
 } else {
     echo 'var canforcebook=false;';
 }
+?>
 // do a little form verifying
-// Todo: CData
-echo 'function validate_and_submit () {'.
-echo 'if (/(^$)|(^\s+$)/.test(document.forms["main"].name.value)) { // null strings and spaces only strings not allowed';
-echo 'alert ( "'.get_string('you_have_not_entered','block_mrbs').'\n'.get_string('description').'")';
-echo 'return false }';
-  
-if (!$enable_periods) {
-    echo 'h = parseInt(document.forms["main"].hour.value);';
-    echo 'm = parseInt(document.forms["main"].minute.value);';
-    echo 'if(h > 23 || m > 59) {';
-    echo 'alert ("'.get_string('you_have_not_entered','block_mrbs').'\n'.get_string('valid_time_of_day','block_mrbs').'");';
-    echo 'return false }';
-  
-}
+function validate_and_submit ()
+{
+  // null strings and spaces only strings not allowed
+  if(/(^$)|(^\s+$)/.test(document.forms["main"].name.value)) {
+    alert ( "<?php echo get_string('you_have_not_entered','block_mrbs') . '\n' . get_string('description') ?>");
+    return false;
+  }
+  <?php if( ! $enable_periods ) { ?>
 
-echo '// check form element exist before trying to access it';
-echo '  if( document.forms["main"].id )';
-echo '    i1 = parseInt(document.forms["main"].id.value);';
-echo '  else';
-echo '    i1 = 0;';
-echo '  i2 = parseInt(document.forms["main"].rep_id.value);';
-echo '  if ( document.forms["main"].rep_num_weeks) {';
-echo '  	n = parseInt(document.forms["main"].rep_num_weeks.value);';
-echo '  } ';
-echo '  if ((!i1 || (i1 && i2)) && document.forms["main"].rep_type && document.forms["main"].rep_type[6].checked && (!n || n < 2)) { ';
-echo '    alert("'.get_string('you_have_not_entered','block_mrbs').'\n'.get_string('useful_n-weekly_value','block_mrbs').'");';
-echo '    return false;';
-echo ''  }';'
+  h = parseInt(document.forms["main"].hour.value);
+  m = parseInt(document.forms["main"].minute.value);
+
+  if(h > 23 || m > 59) {
+    alert ("<?php echo get_string('you_have_not_entered','block_mrbs') . '\n' . get_string('valid_time_of_day','block_mrbs') ?>");
+    return false;
+  }
+  <?php } ?>
+
+  // check form element exist before trying to access it
+  if( document.forms["main"].id )
+    i1 = parseInt(document.forms["main"].id.value);
+  else
+    i1 = 0;
+
+  i2 = parseInt(document.forms["main"].rep_id.value);
+  if ( document.forms["main"].rep_num_weeks) {
+  	n = parseInt(document.forms["main"].rep_num_weeks.value);
+  }
+  if ((!i1 || (i1 && i2)) && document.forms["main"].rep_type && document.forms["main"].rep_type[6].checked && (!n || n < 2)) {
+    alert("<?php echo get_string('you_have_not_entered','block_mrbs') . '\n' . get_string('useful_n-weekly_value','block_mrbs') ?>");
+    return false;
+  }
 
   // check that a room(s) has been selected
   // this is needed as edit_entry_handler does not check that a room(s)

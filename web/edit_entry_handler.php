@@ -23,7 +23,7 @@ $rep_day = optional_param('rep_day',NULL, PARAM_RAW);
 $rep_opt = optional_param('rep_opt','',PARAM_SEQUENCE);
 $rep_enddate = optional_param('rep_enddate',0,PARAM_INT);
 $forcebook = optional_param('forcebook',FALSE,PARAM_BOOL);
-$returl = optional_param('returl',NULL, PARAM_LOCALURL);
+
 # $all_day
 # echo $rep_type;
 
@@ -408,7 +408,7 @@ if(strlen($err))
         echo "</UL>";
 }
 
-echo '<a href="'.$returl.'">'.get_string('returncal','block_mrbs').'</a><p>';
+echo "<a href=\"$returl\">".get_string('returncal','block_mrbs')."</a><p>";
 
 include "trailer.php"; 
 ?>

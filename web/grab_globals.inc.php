@@ -27,7 +27,6 @@ if (!empty($_GET))
 }
 else if (!empty($HTTP_GET_VARS))
 {
-    var_dump($HTTP_GET_VARS);
     extract($HTTP_GET_VARS, EXTR_OVERWRITE);
 }
 
