@@ -190,7 +190,7 @@ function is_timetabled($name,$time) {
   * @return integer date/time in seconds since epoch
   */
 function time_to_datetime($date,$time) {
-    global $cfg_mrbs;
+    $cfg_mrbs = get_config('block/mrbs');
     list($hours,$mins)=explode(':',$time);
     if ($cfg_mrbs->enable_periods && $hours == 0 && $mins < count($cfg_mrbs->periods)) {
         $hours = 12;  // Periods are imported as  P1 - 00:00, P2 - 00:01, P3 - 00:02, etc.
