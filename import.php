@@ -100,7 +100,8 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
                         //limit to 1 to keep this simpler- if there is a 3-way clash it will be noticed by one of the 2 teachers notified
                         //if ($existingclass=get_record_sql($sql,true)) {
-                        if ($existingclass = $DB->get_record_sql($sql,array($start_time,$start_time,$end_time,$end_time,$start_time,$end_time, $room))) {
+                        if ($existingclasses = $DB->get_records_sql($sql,array($start_time,$start_time,$end_time,$end_time,$start_time,$end_time, $room))) {
+                            $existingclass = current($existingclasses);
                             $hr_start_time=date("j F, Y",$start_time) . ", " . to_hr_time($start_time);
                             $a = new object;
                             $a->oldbooking=$existingclass->description.'('.$existingclass->id.')';
