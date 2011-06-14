@@ -32,12 +32,18 @@ $script_start_time=time();
 
 $cfg_mrbs = get_config('block/mrbs'); //get Moodle config settings for the MRBS block
 $output='';
+$errors = array();
+$line = 0;
+$newbookings = 0;
+$updatedbookings = 0;
+
 if (file_exists($cfg_mrbs->cronfile)) {
     if ($mrbs_sessions = fopen($cfg_mrbs->cronfile,'r')) {
         $output.= get_string('startedimport','block_mrbs')."\n";
         $now = time();
         $DB->set_field_select('mrbs_entry', 'type', 'M', 'type=\'K\' and start_time > ?', array($now)); // Change old imported (type K) records to temporary type M
         while ($array = fgetcsv($mrbs_sessions)) { //import timetable into mrbs
+            $line++;
             $csvrow=new object;
             $csvrow->start_time=clean_param($array[0],PARAM_TEXT);
             $csvrow->end_time=clean_param($array[1],PARAM_TEXT);
@@ -50,8 +56,16 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
             list($year, $month, $day) = split('[/]', $csvrow->first_date);
             $date = mktime(00,00,00,$month,$day,$year);
+            if (!$DB->get_record('user', array('username' => $csvrow->username))) {
+                $errors[] = get_string('nouser', 'block_mrbs', $csvrow->username).' '.get_string('importline', 'block_mrbs', $line);
+                $csvrow->username = '';
+            }
+
             $room = room_id_lookup($csvrow->room_name);
             $weeks =str_split($csvrow->weekpattern);
+
+            $count = 0;
+
             foreach ($weeks as $week) {
                 if (($week==1) and ($date > $now)) {
                     $start_time = time_to_datetime($date,$csvrow->start_time);
@@ -68,7 +82,13 @@ if (file_exists($cfg_mrbs->cronfile)) {
                         $entry->type='K';
                         $entry->description=$csvrow->description;
                         $newentryid=$DB->insert_record('mrbs_entry',$entry);
+                        $newbookings++;
 
+                        //If there is another non-imported booking there, send emails. It is assumed that simultanious imported classes are intentional
+                        if (empty($csvrow->room_id)) {
+                            $csvrow->room_id = "''";
+                        }
+                        
                         //If there is another non-imported booking there, send emails. It is assumed that simultanious imported classes are intentional
                         $sql = "SELECT *
                                 FROM {mrbs_entry} AS e
@@ -80,7 +100,7 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
                         //limit to 1 to keep this simpler- if there is a 3-way clash it will be noticed by one of the 2 teachers notified
                         //if ($existingclass=get_record_sql($sql,true)) {
-                        if ($existingclass=$DB->get_record_sql($sql,array($start_time,$start_time,$end_time,$end_time,$start_time,$end_time, $room))) {
+                        if ($existingclass = $DB->get_record_sql($sql,array($start_time,$start_time,$end_time,$end_time,$start_time,$end_time, $room))) {
                             $hr_start_time=date("j F, Y",$start_time) . ", " . to_hr_time($start_time);
                             $a = new object;
                             $a->oldbooking=$existingclass->description.'('.$existingclass->id.')';
@@ -88,7 +108,7 @@ if (file_exists($cfg_mrbs->cronfile)) {
                             $a->time=$hr_start_time;
                             $a->room=$csvrow->room_name;
                             $a->admin=$cfg_mrbs->admin.' ('.$cfg_mrbs->admin_email.')';
-                            $output.= get_string('clash','block_mrbs',$a);
+                            $clash = get_string('clash','block_mrbs',$a).' '.get_string('importline', 'block_mrbs', $line);
 
                             $existingteacher=$DB->get_record('user',array('username' => $existingclass->create_by));
                             $newteacher=$DB->get_record('user',array('username' => $csvrow->username));
@@ -103,7 +123,8 @@ if (file_exists($cfg_mrbs->cronfile)) {
                             } else {
                                 $output.=get_string('clashemailnotsent','block_mrbs').$csvrow->description.'('.$newentryid.')';
                             }
-                            $output.="\n";
+                            $clash.="\n";
+                            $errors[] = $clash;
                         }
                     }
                 }
@@ -129,9 +150,22 @@ if (file_exists($cfg_mrbs->cronfile)) {
             $output.=$cfg_mrbs->cronfile.get_string('movedto','block_mrbs').$cfg_mrbs->cronfile.'.'.$date."\n";
         }
         $script_time_taken = time() - $script_start_time;
-        $output.=get_string('finishedimport','block_mrbs',$script_time_taken);
-
-
+        $a = new stdClass;
+        $a->timetaken = $script_time_taken;
+        $a->errors = count($errors);
+        $a->newbookings = $newbookings;
+        $a->updatedbookings = $updatedbookings;
+        $output .= get_string('finishedimport','block_mrbs', $a)."\n";
+        
+        
+        if(count($errors > 0)){
+        	$output .= "\n\n";
+            $output .= get_string('importerrors', 'block_mrbs')."\n";
+            foreach ($errors as $error) {
+            	$output .= $error."\n";
+            }
+        }
+        
         echo $output; //will only show up if being run via apache
 
         //email output to admin
@@ -144,11 +178,11 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
 //looks up the room id from the name
 function room_id_lookup($name) {
-    global $DB;
+    global $DB, $errors, $line;
     if (!$room=$DB->get_record('mrbs_room',array('room_name'=>$name))) {
-        $error = "ERROR: failed to return id from database (room $name probably doesn't exist)";
-        $output.= $error . "\n";
-        return 'error';
+        $error = get_string('noroomname', 'block_mrbs', $name);
+        $errors[] = $error .' '.get_string('importline', 'block_mrbs', $line). "\n";
+        return false;
     } else {
         return $room->id;
     }
@@ -165,7 +199,7 @@ function room_id_lookup($name) {
   * @return bool does a previous booking exist?
   */
 function is_timetabled($name,$time) {
-    global $DB;
+    global $DB, $updatedbookings;
     if ($DB->get_record('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'L'))) {
         return true;
     } else if ($record = $DB->get_record('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'M'))) {
@@ -173,6 +207,7 @@ function is_timetabled($name,$time) {
         $upd->id = $record->id;
         $upd->type = 'K';
         if ($DB->update_record('mrbs_entry', $upd)) {
+            $updatedbookings++;
             return true;
         } else {
            return false;
