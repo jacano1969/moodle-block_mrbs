@@ -221,6 +221,7 @@ $string['noareas']            = 'No Areas';
 $string['norights']           = 'You do not have access rights to modify this item.';
 $string['norooms']            = 'No rooms.';
 $string['noroomsfound']            = 'Sorry, no rooms found';
+$string['noroomname']       = 'Failed to return room id from database (room $a probably doesn\'t exist)';
 $string['not_found']          = ' not found';
 $string['not_php3']             = '<H1>WARNING: This probably does not work with PHP3</H1>';
 $string['nouser']            = 'The specified user {$a} was not found';
