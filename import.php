@@ -40,7 +40,9 @@ $updatedbookings = 0;
 if (file_exists($cfg_mrbs->cronfile)) {
     if ($mrbs_sessions = fopen($cfg_mrbs->cronfile,'r')) {
         $output.= get_string('startedimport','block_mrbs')."\n";
-        $now = time();
+        //$now = time();
+        $now = strtotime('1 week ago'); // keep 1 week's entries, so previous days this week don't show up blank. TODO: make this configurable?
+
         $DB->set_field_select('mrbs_entry', 'type', 'M', 'type=\'K\' and start_time > ?', array($now)); // Change old imported (type K) records to temporary type M
         while ($array = fgetcsv($mrbs_sessions)) { //import timetable into mrbs
             $line++;
