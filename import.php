@@ -171,6 +171,32 @@ if (file_exists($cfg_mrbs->cronfile)) {
             }
         }
 
+        // Very nasty hack to fix DST issues
+        if ($cfg_mrbs->enable_periods) {
+            $where = 'SUBSTR(FROM_UNIXTIME(start_time),12,2) = ?';
+            $hourbehinds = $DB->get_records_select('mrbs_entry', $where, array(11), 'id, start_time, end_time');
+            $houraheads = $DB->get_records_select('mrbs_entry', $where, array(13), '', 'id, start_time, end_time');
+
+            if ($hourbehinds) {
+                foreach($hourbehinds as $hourbehind) {
+                    $params = array('id' => $hourbehind->id);
+                    $DB->set_field('mrbs_entry', 'start_time', $hourbehind->start_time+3600, $params);
+                    $DB->set_field('mrbs_entry', 'end_time', $hourbehind->end_time+3600, $params);
+                }
+            }
+
+            if ($houraheads) {
+                foreach($houraheads as $hourahead) {
+                    $params = array('id' => $hourahead->id);
+                    $DB->set_field('mrbs_entry', 'start_time', $hourahead->start_time-3600, 'id', $params);
+                    $DB->set_field('mrbs_entry', 'end_time', $hourahead->end_time-3600, 'id', $params);
+                }
+            }
+
+            $output .= 'Corrected '.(count($hourbehinds)+count($houraheads)).' daylight savings issues'."\n";
+        }
+        // End nasty hack
+
         echo $output; //will only show up if being run via apache
 
         //email output to admin
