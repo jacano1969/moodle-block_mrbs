@@ -231,9 +231,10 @@ function room_id_lookup($name) {
   */
 function is_timetabled($name,$time) {
     global $DB, $updatedbookings;
-    if ($DB->get_record('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'L'))) {
+    if ($DB->record_exists('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'L'))) {
         return true;
-    } else if ($record = $DB->get_record('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'M'))) {
+    } else if ($records = $DB->get_records('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'M'))) {
+        $record = current($records);
         $upd = new stdClass;
         $upd->id = $record->id;
         $upd->type = 'K';
