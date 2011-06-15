@@ -55,7 +55,11 @@ if (file_exists($cfg_mrbs->cronfile)) {
             $csvrow->description=clean_param($array[7],PARAM_TEXT);
 
             list($year, $month, $day) = split('[/]', $csvrow->first_date);
-            $date = mktime(00,00,00,$month,$day,$year);
+            if ($cfg_mrbs->enable_periods) {
+                $date = mktime(12,00,00,$month,$day,$year,date('I'));
+            } else {
+                $date = mktime(00,00,00,$month,$day,$year,date('I'));
+            }
             if (!$DB->get_record('user', array('username' => $csvrow->username))) {
                 $errors[] = get_string('nouser', 'block_mrbs', $csvrow->username).' '.get_string('importline', 'block_mrbs', $line);
                 $csvrow->username = '';
@@ -166,7 +170,7 @@ if (file_exists($cfg_mrbs->cronfile)) {
             	$output .= $error."\n";
             }
         }
-        
+
         echo $output; //will only show up if being run via apache
 
         //email output to admin
