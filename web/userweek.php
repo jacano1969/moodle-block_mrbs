@@ -240,7 +240,6 @@ for ($j = 0; $j<=($num_of_days-1) ; $j++) {
 }
 
 
-
 // Include the active cell content management routines.
 // Must be included before the beginnning of the main table.
     if ($javascript_cursor) // If authorized in config.inc.php, include the javascript cursor management.
@@ -297,6 +296,13 @@ $hiliteurl = new moodle_url($baseurl, array('area'=>$area, 'room'=>$room));
 $row_class = "even_row";
 $starttime = mktime($morningstarts, $morningstarts_minutes, 0, $month, $day+$j, $year);
 $endtime = mktime($eveningends, $eveningends_minutes, 0, $month, $day+$j, $year);
+$breaks = array();
+if ($cfg_mrbs->studytime) {
+    $breaks = explode(',', $cfg_mrbs->breaks);
+    foreach($breaks as $k => $break) {
+        $breaks[$k]--;
+    }
+}
 for ($t = $starttime; $t <= $endtime; $t += $resolution) {
     $row_class = ($row_class == "even_row") ? "odd_row" : "even_row";
     // use hour:minute format
@@ -388,6 +394,7 @@ for ($t = $starttime; $t <= $endtime; $t += $resolution) {
             $long_descrs = array($long_descr);
             $ids = array($id);
         }
+        
         if (isset($descrs)){
             for($i=0;$i<count($descrs);$i++){
                 //if it is booked then show
@@ -397,7 +404,9 @@ for ($t = $starttime; $t <= $endtime; $t += $resolution) {
                                                   'month'=>$wmonth, 'year'=>$wyear));
                 echo ' <a href="'.$viewentry.'" title="'.$long_descr.'">'.$descrs[$i].'</a>';
             }
-        }else{
+        } else if ($cfg_mrbs->studytime && !in_array($time_t, $breaks)){
+            echo '<div style="text-align:center;">'.get_string('studytime', 'block_mrbs').'</div>';
+        } else {
             echo "&nbsp;&nbsp;";
         }
 

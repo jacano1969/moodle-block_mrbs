@@ -71,6 +71,12 @@ if (isset($cfg_mrbs->enable_periods)) {
 
         $settings->add(new admin_setting_configtextarea('periods', get_string('config_periods', 'block_mrbs'),get_string('config_periods2', 'block_mrbs'),''));
         $settings->settings->periods->plugin='block/mrbs';
+
+        $settings->add(new admin_setting_configcheckbox('studytime', get_string('config_studytime', 'block_mrbs'),get_string('config_studytime2', 'block_mrbs'),''));
+        $settings->settings->studytime->plugin='block/mrbs';
+
+        $settings->add(new admin_setting_configtext('breaks', get_string('config_breaks', 'block_mrbs'),get_string('config_breaks2', 'block_mrbs'),''));
+        $settings->settings->breaks->plugin='block/mrbs';
     }
 }
 
