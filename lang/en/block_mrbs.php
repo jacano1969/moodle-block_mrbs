@@ -43,9 +43,9 @@ $string['config_admin2'] = 'Name of the MRBS administrator';
 $string['config_area_list_format'] = 'Show area list';
 $string['config_area_list_format2'] = 'Should areas be shown as a list or a drop-down select box?';
 $string['config_breaks'] = 'Break periods';
-$string['config_breaks2'] = 'Periods listed here will be treated as breaks, and will not be treated
+$string['config_breaks2'] = 'Periods listed here will be treated as breaks, and will not be shown
     as study periods.  Enter the numbers of the periods as a comma-separated list. E.g. to treat the
-    second and forth periods entered above as breaks, enter the following: <tt>2,4</tt>';
+    second and fourth periods entered above as breaks, enter the following: <tt>2,4</tt>';
 $string['config_cookie_path_override'] = 'Cookie path override';
 $string['config_cookie_path_override2'] = 'If this value is set it will be used by the \'php\' session scheme to override the default behaviour of automatically determining the cookie path to use.';
 $string['config_date_ddmmyy']  = '10 July';
@@ -112,7 +112,7 @@ $string['config_show_plus_link'] = 'Show plus link';
 $string['config_show_plus_link2'] = 'Change to true to always show the (+) link';
 $string['config_studytime'] = 'Enable Study Time';
 $string['config_studytime2'] = 'If this option is enabled, the userweek (timetable) page will have
-    all empty slots that are not indicated as breaks below will be shown as independant study time.';
+    all empty slots that are not indicated as breaks below shown as independent study time.';
 $string['config_timeformat'] = 'Time format';
 $string['config_timeformat2']  = 'Time format to be used by MRBS.';
 $string['config_times_right_side'] = 'Time right side';
