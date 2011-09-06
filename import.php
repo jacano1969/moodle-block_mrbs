@@ -262,7 +262,7 @@ function time_to_datetime($date,$time) {
     $cfg_mrbs = get_config('block/mrbs');
     list($hours,$mins)=explode(':',$time);
     if ($cfg_mrbs->enable_periods && $hours == 0 && $mins < count($cfg_mrbs->periods)) {
-        $hours = 12;  // Periods are imported as  P1 - 00:00, P2 - 00:01, P3 - 00:02, etc.
+        //$hours = 12;  // Periods are imported as  P1 - 00:00, P2 - 00:01, P3 - 00:02, etc.
                       // but stored internally as P1 - 12:00, P2 - 12:01, P3 - 12:02, etc.
     }
     return $date + 60*$mins + 3600*$hours;
