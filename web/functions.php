@@ -58,7 +58,7 @@ function print_header_mrbs($day=NULL, $month=NULL, $year=NULL, $area=NULL, $user
     /// Print the header
     $PAGE->set_context(get_context_instance(CONTEXT_SYSTEM));
     $PAGE->navbar->add($strmrbs);
-    $PAGE->set_pagelayout('incourse');
+    //$PAGE->set_pagelayout('incourse');
     $PAGE->set_title($strmrbs);
     $PAGE->set_heading(format_string($strmrbs));
 
