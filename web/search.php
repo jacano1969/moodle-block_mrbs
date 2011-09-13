@@ -135,7 +135,7 @@ if($has_prev || $has_next)
 	if($has_prev)
 	{
         $pos = max(0, $search_pos-$search["count"]);
-		echo '<A HREF="'.$thisurl->out(true, array('search_pos', $pos)).'">';
+		echo '<A HREF="'.$thisurl->out(true, array('search_pos'=> $pos)).'">';
 	}
 
 	echo "<B>" . get_string('previous') . "</B>";
@@ -151,7 +151,7 @@ if($has_prev || $has_next)
 	if($has_next)
 	{
         $pos = max(0, $search_pos+$search["count"]);
-        echo '<a href="'.$pos->out(true, array('search_pos', $pos)).'">';
+        echo '<a href="'.$thisurl->out(true, array('search_pos'=> $pos)).'">';
 	}
 
 	echo "<B>". get_string('next') ."</B>";
