@@ -37,15 +37,19 @@ $line = 0;
 $newbookings = 0;
 $updatedbookings = 0;
 
+
 if (file_exists($cfg_mrbs->cronfile)) {
+    debug('File found, starting import');
     if ($mrbs_sessions = fopen($cfg_mrbs->cronfile,'r')) {
         $output.= get_string('startedimport','block_mrbs')."\n";
         //$now = time();
         $now = strtotime('1 week ago'); // keep 1 week's entries, so previous days this week don't show up blank. TODO: make this configurable?
 
         $DB->set_field_select('mrbs_entry', 'type', 'M', 'type=\'K\' and start_time > ?', array($now)); // Change old imported (type K) records to temporary type M
+        debug('Changed type of old entries to M');
         while ($array = fgetcsv($mrbs_sessions)) { //import timetable into mrbs
             $line++;
+            debug('Processing row '.$line);
             $csvrow=new object;
             $csvrow->start_time=clean_param($array[0],PARAM_TEXT);
             $csvrow->end_time=clean_param($array[1],PARAM_TEXT);
@@ -72,12 +76,21 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
             $count = 0;
 
+            debug('Start Time: '.$csvrow->start_time);
+            debug('End Time: '.$csvrow->end_time);
+            debug('First Date: '.$csvrow->first_date);
+            debug('Week Pattern: '.$csvrow->weekpattern);
+            debug('Room: '.$room.' ('.$csvrow->room_name.')');
+            debug('User: '.$csvrow->username);
+            debug('Booking: '.$csvrow->name.' '.$csvrow->description);
+
             foreach ($weeks as $week) {
                 if (($week==1) and ($date > $now)) {
                     $start_time = time_to_datetime($date,$csvrow->start_time);
                     $end_time = time_to_datetime($date,$csvrow->end_time);
-                    //echo userdate($date, '%d/%m/%Y %H:%M =>');
-                    //echo userdate($start_time, '%d/%m/%Y %H:%M')."\n";
+
+                    debug('Importing booking to '.date('YMd Hi', $start_time));
+
                     if (!is_timetabled($csvrow->name,$start_time)) { ////only timetable class if it isn't already timetabled elsewhere (class been moved)
                         $entry->start_time=$start_time;
                         $entry->end_time=$end_time;
@@ -88,13 +101,14 @@ if (file_exists($cfg_mrbs->cronfile)) {
                         $entry->type='K';
                         $entry->description=$csvrow->description;
                         $newentryid=$DB->insert_record('mrbs_entry',$entry);
+                        debug('Inserted new record with id '.$newentryid);
                         $newbookings++;
 
                         //If there is another non-imported booking there, send emails. It is assumed that simultanious imported classes are intentional
                         if (empty($csvrow->room_id)) {
                             $csvrow->room_id = "''";
                         }
-                        
+
                         //If there is another non-imported booking there, send emails. It is assumed that simultanious imported classes are intentional
                         $sql = "SELECT *
                                 FROM {mrbs_entry} AS e
@@ -105,8 +119,8 @@ if (file_exists($cfg_mrbs->cronfile)) {
                                 AND e.room_id = ? AND type <>'K'";
 
                         //limit to 1 to keep this simpler- if there is a 3-way clash it will be noticed by one of the 2 teachers notified
-                        //if ($existingclass=get_record_sql($sql,true)) {
                         if ($existingclasses = $DB->get_records_sql($sql,array($start_time,$start_time,$end_time,$end_time,$start_time,$end_time, $room))) {
+                            debug(count($existingclasses).' clashes found. Sending an email.');
                             $existingclass = current($existingclasses);
                             $hr_start_time=date("j F, Y",$start_time) . ", " . to_hr_time($start_time);
                             $a = new object;
@@ -133,6 +147,8 @@ if (file_exists($cfg_mrbs->cronfile)) {
                             $clash.="\n";
                             $errors[] = $clash;
                         }
+                    } else {
+                        debug('Booking already exists, skipped');
                     }
                 }
                 $date += 604800;
@@ -149,7 +165,10 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
         // any remaining type M records are no longer in the import file, so delete
 //        delete_records_select('mrbs_entry', 'type=\'M\'');
-        $DB->delete_records_select('mrbs_entry', 'type=\'M\'');
+        if($Ms = $DB->get_records('mrbs_entry', array('type' => 'M'))) {
+            $DB->delete_records('mrbs_entry', array('type' => 'M'));
+            debug('Deleted '.count($Ms).' remaining M type records');
+        }
 
         //move the processed file to prevent wasted time re-processing TODO: option for how long to keep these- I've found them useful for debugging but obviously can't keep them for ever
         $date=date('Ymd');
@@ -163,8 +182,8 @@ if (file_exists($cfg_mrbs->cronfile)) {
         $a->newbookings = $newbookings;
         $a->updatedbookings = $updatedbookings;
         $output .= get_string('finishedimport','block_mrbs', $a)."\n";
-        
-        
+
+
         if(count($errors > 0)){
         	$output .= "\n\n";
             $output .= get_string('importerrors', 'block_mrbs')."\n";
@@ -274,7 +293,7 @@ function time_to_datetime($date,$time) {
   * Will probably break is some idiot has more than 59 periods per day (seems very unlikely though)
   *
   * @param $time integer unix timestamp
-  * @return string either the time formatted as hh:mm or the name of the period starting at this time
+  * @return string eithemetror the time formatted as hh:mm or the name of the period starting at this time
   */
 function to_hr_time($time) {
     $cfg_mrbs = get_config('block/mrbs');
@@ -284,5 +303,12 @@ function to_hr_time($time) {
         return trim($periods[$period]);
     } else {
         return date('G:i',$time);
+    }
+}
+
+function debug($message) {
+    global $CFG;
+    if ($CFG->debug == DEBUG_DEVELOPER) {
+        mtrace($message.PHP_EOL);
     }
 }
