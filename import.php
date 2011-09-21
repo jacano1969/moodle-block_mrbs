@@ -91,7 +91,7 @@ if (file_exists($cfg_mrbs->cronfile)) {
 
                     debug('Importing booking to '.date('YMd Hi', $start_time));
 
-                    if (!is_timetabled($csvrow->name,$start_time)) { ////only timetable class if it isn't already timetabled elsewhere (class been moved)
+                    if (!is_timetabled($csvrow->name,$start_time,$room)) { ////only timetable class if it isn't already timetabled elsewhere (class been moved)
                         $entry->start_time=$start_time;
                         $entry->end_time=$end_time;
                         $entry->room_id=$room;
@@ -250,12 +250,12 @@ function room_id_lookup($name) {
   * @param $time int start time of the booking in unix timestamp format
   * @return bool does a previous booking exist?
   */
-function is_timetabled($name,$time) {
+function is_timetabled($name,$time,$room) {
     global $DB, $updatedbookings;
     if ($DB->record_exists('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'L'))) {
         debug('Booking has been moved');
         return true;
-    } else if ($records = $DB->get_records('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'M'))) {
+    } else if ($records = $DB->get_records('mrbs_entry', array('name'=>$name, 'start_time'=>$time, 'type'=>'M', 'room_id'=>$room))) {
         debug('Booking exists, changing type back to K');
         $record = current($records);
         $upd = new stdClass;
