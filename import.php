@@ -116,7 +116,7 @@ if (file_exists($cfg_mrbs->cronfile)) {
                                     ((e.start_time < ? AND e.end_time > ?)
                                   OR (e.start_time < ? AND e.end_time > ?)
                                   OR (e.start_time >= ? AND e.end_time <= ? ))
-                                AND e.room_id = ? AND type <>'K'";
+                                AND e.room_id = ? AND type NOT IN ('K', 'M')";
 
                         //limit to 1 to keep this simpler- if there is a 3-way clash it will be noticed by one of the 2 teachers notified
                         if ($existingclasses = $DB->get_records_sql($sql,array($start_time,$start_time,$end_time,$end_time,$start_time,$end_time, $room))) {
