@@ -209,8 +209,8 @@ if (file_exists($cfg_mrbs->cronfile)) {
             if ($houraheads) {
                 foreach($houraheads as $hourahead) {
                     $params = array('id' => $hourahead->id);
-                    $DB->set_field('mrbs_entry', 'start_time', $hourahead->start_time-3600, 'id', $params);
-                    $DB->set_field('mrbs_entry', 'end_time', $hourahead->end_time-3600, 'id', $params);
+                    $DB->set_field('mrbs_entry', 'start_time', $hourahead->start_time-3600, $params);
+                    $DB->set_field('mrbs_entry', 'end_time', $hourahead->end_time-3600, $params);
                 }
             }
 
