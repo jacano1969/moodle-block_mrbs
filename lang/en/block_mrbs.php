@@ -304,7 +304,6 @@ $string['through']            = ' through ';
 $string['too_may_entrys']     = 'The selected options will create too many entries.<BR>Please use different options!';
 $string['ttfor']     = 'Timetable for: ';
 $string['type']               = 'Type';
-$string['typea']               = NULL;
 $string['unknown']            = 'Unknown';
 $string['update_area_failed'] = 'Update area failed';
 $string['update_room_failed'] = 'Update room failed';
